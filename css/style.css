@@ -1,0 +1,163 @@
+:root{
+    --paper:#e7d8c1;
+    --paper2:#bca98f;
+    --ink:#211d19;
+    --dark:#111317;
+    --blood:#743036;
+    --gold:#c8a35a;
+    --green:#718261;
+    --purple:#675071;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 12% 10%, rgba(200,163,90,.16), transparent 24%),
+      radial-gradient(circle at 86% 16%, rgba(103,80,113,.2), transparent 26%),
+      linear-gradient(135deg,#131519,#211f1d 45%,#0e1115);
+    color:var(--paper);
+    font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;
+    overflow-x:hidden;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    opacity:.28;
+    background-image:
+      linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size:26px 26px;
+    mix-blend-mode:overlay;
+  }
+  .wrap{max-width:1340px;margin:0 auto;padding:16px}
+  header{
+    display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:10px
+  }
+  h1{margin:0;font-size:30px;letter-spacing:2px}
+  .subtitle{margin-top:6px;color:#b7a994;font-size:14px;line-height:1.5}
+  .btn{
+    border:1px solid rgba(231,216,193,.22);
+    background:#2c2925;color:var(--paper);
+    padding:10px 13px;cursor:pointer;font-weight:800;
+    box-shadow:5px 5px 0 rgba(0,0,0,.28);
+    transition:.12s ease;font-family:inherit
+  }
+  .btn:hover{transform:translate(-1px,-1px);box-shadow:7px 7px 0 rgba(0,0,0,.28)}
+  .btn.primary{background:#81483d}
+  .layout{display:grid;grid-template-columns:1fr 330px;gap:14px}
+  .stage{
+    position:relative;background:#0d0f12;border:2px solid rgba(231,216,193,.2);
+    box-shadow:0 20px 60px rgba(0,0,0,.36);overflow:hidden
+  }
+  #game{width:100%;height:auto;display:block;background:#151519}
+  .caption{
+    display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;
+    padding:10px 12px;background:rgba(0,0,0,.28);border-top:1px solid rgba(231,216,193,.14);
+    color:#c7b7a0;font-size:13px
+  }
+  .kbd{display:inline-block;min-width:24px;text-align:center;padding:2px 6px;margin:0 2px;
+    background:rgba(0,0,0,.32);border:1px solid rgba(231,216,193,.24);box-shadow:2px 2px 0 rgba(0,0,0,.3);
+    color:#f6e9d3;font-weight:bold}
+  .side{display:flex;flex-direction:column;gap:12px}
+  .card{
+    background:rgba(231,216,193,.075);border:1px solid rgba(231,216,193,.18);
+    padding:14px;box-shadow:8px 8px 0 rgba(0,0,0,.18)
+  }
+  .card h2,.card h3{margin:0 0 8px;font-size:18px}
+  .small{font-size:13px;color:#b9a994;line-height:1.65}
+  .objective-list{margin:8px 0 0;padding-left:19px;line-height:1.65;font-size:14px;color:#ddccb4}
+  .stat{margin:9px 0}
+  .stat-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;color:#ddccb4}
+  .bar{height:12px;background:rgba(0,0,0,.36);border:1px solid rgba(231,216,193,.16);overflow:hidden}
+  .fill{height:100%;transition:width .16s ease;background:#c8a35a}
+  .hp{background:#9d3c37}.nutrition{background:#718261}.development{background:#c8a35a}.danger{background:#675071}
+  .msg{min-height:112px;line-height:1.7;font-size:14px;border-left:4px solid #c8a35a}
+  .lifecycle{display:grid;gap:6px}
+  .life-step{
+    display:flex;gap:8px;align-items:center;padding:7px 8px;
+    background:rgba(0,0,0,.17);border:1px solid rgba(231,216,193,.14);
+    color:#9e907d;font-size:13px
+  }
+  .life-step.active{color:#f3e2ca;border-color:rgba(200,163,90,.72);background:rgba(200,163,90,.14)}
+  .life-step.done{color:#cdd8bd;border-color:rgba(113,130,97,.56);background:rgba(113,130,97,.12)}
+  .modal{
+    position:absolute;inset:0;background:rgba(11,12,14,.82);display:flex;
+    align-items:center;justify-content:center;padding:22px;z-index:30;backdrop-filter:blur(5px)
+  }
+  .modal.hidden{display:none}
+  .paper{
+    width:min(780px,96%);background:linear-gradient(135deg,#eadfcf,#d4c0a7);color:#221c17;
+    border:3px solid #30251d;box-shadow:14px 14px 0 rgba(0,0,0,.32);
+    padding:26px;position:relative
+  }
+  .paper::after{content:"";position:absolute;inset:10px;border:1px solid rgba(48,37,29,.22);pointer-events:none}
+  .paper h2{margin:0 0 12px;font-size:30px;letter-spacing:2px}
+  .paper p,.paper li{line-height:1.8}
+  .paper ul{padding-left:22px}
+  .paper .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+  .paper .btn{background:#2c2925}.paper .btn.primary{background:#81483d}
+
+  .touch-controls{
+    display:none;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    padding:10px;
+    background:rgba(0,0,0,.32);
+    border-top:1px solid rgba(231,216,193,.14);
+    user-select:none;
+    -webkit-user-select:none;
+    touch-action:none;
+  }
+  .touch-left-group,.touch-right-group{
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .touch-left-group{justify-content:flex-start}
+  .touch-right-group{justify-content:flex-end}
+  .touch-btn{
+    min-width:58px;
+    height:54px;
+    border:1px solid rgba(231,216,193,.25);
+    background:#2c2925;
+    color:#f6e9d3;
+    font-size:20px;
+    font-weight:900;
+    box-shadow:4px 4px 0 rgba(0,0,0,.28);
+    border-radius:10px;
+    touch-action:none;
+    font-family:inherit;
+  }
+  .touch-btn:active,
+  .touch-btn.active{
+    transform:translate(2px,2px);
+    box-shadow:2px 2px 0 rgba(0,0,0,.28);
+    background:#81483d;
+  }
+  .touch-btn.jump{background:#5f5637}
+  .touch-btn.action{background:#81483d}
+  .touch-btn.small-touch{font-size:14px;min-width:72px;background:#39424a}
+
+  @media (hover:none), (pointer:coarse), (max-width:900px){
+    .touch-controls{display:grid}
+    .wrap{padding:8px}
+    header{margin-bottom:8px}
+    h1{font-size:24px}
+    .subtitle{font-size:12px}
+    .caption{font-size:12px}
+    .layout{grid-template-columns:1fr}
+    .side{display:flex}
+    .card{padding:12px}
+  }
+  @media (max-width:520px){
+    .touch-controls{grid-template-columns:1fr;gap:8px}
+    .touch-left-group,.touch-right-group{justify-content:center}
+    .touch-btn{min-width:64px;height:52px}
+    .touch-btn.small-touch{min-width:82px}
+  }
+
+  @media(max-width:1050px){.layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}}
+  @media(max-width:720px){header{flex-direction:column}.side{display:flex}}
