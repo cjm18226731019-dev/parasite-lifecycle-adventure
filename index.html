@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>寄生虫生命周期大冒险 v3 mobile</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>寄生虫生命周期大冒险</h1>
+      <div class="subtitle">横向卷轴闯关版：移动平台、开关门、检查点、药物巡逻、生命周期知识卡</div>
+    </div>
+    <div>
+      <button class="btn primary" id="btnStart">开始 / 暂停</button>
+      <button class="btn" id="btnRestart">重新开始</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="stage">
+      <canvas id="game" width="960" height="540"></canvas>
+      <div class="caption">
+        <div>
+          <span class="kbd">A</span><span class="kbd">D</span>移动
+          <span class="kbd">W</span>/<span class="kbd">空格</span>跳跃
+          <span class="kbd">E</span>互动/开关
+          <span class="kbd">R</span>回检查点
+        </div>
+        <div id="stageText">阶段：子孢子</div>
+      </div>
+
+      <div class="touch-controls" id="touchControls" aria-label="移动端触屏虚拟按键">
+        <div class="touch-left-group">
+          <button class="touch-btn" id="touchLeft">←</button>
+          <button class="touch-btn" id="touchRight">→</button>
+        </div>
+        <div class="touch-right-group">
+          <button class="touch-btn jump" id="touchJump">跳跃</button>
+          <button class="touch-btn action" id="touchAction">互动</button>
+          <button class="touch-btn small-touch" id="touchRespawn">检查点</button>
+        </div>
+      </div>
+
+      <div class="modal" id="modal">
+        <div class="paper">
+          <h2 id="modalTitle">寄生虫生命周期大冒险</h2>
+          <p id="modalBody"></p>
+          <ul id="modalList"></ul>
+          <div class="actions">
+            <button class="btn primary" id="modalPrimary">开始游戏</button>
+            <button class="btn" id="modalSecondary">关闭</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="card">
+        <h2 id="levelTitle">关卡</h2>
+        <div class="small" id="levelDesc"></div>
+        <ul class="objective-list" id="objectives"></ul>
+      </div>
+
+      <div class="card">
+        <h3>状态</h3>
+        <div class="stat"><div class="stat-top"><span>HP 生命值</span><span id="hpText">100</span></div><div class="bar"><div class="fill hp" id="hpBar"></div></div></div>
+        <div class="stat"><div class="stat-top"><span>Nutrition 营养</span><span id="nutritionText">0</span></div><div class="bar"><div class="fill nutrition" id="nutritionBar"></div></div></div>
+        <div class="stat"><div class="stat-top"><span>Development 发育</span><span id="developmentText">0</span></div><div class="bar"><div class="fill development" id="developmentBar"></div></div></div>
+        <div class="stat"><div class="stat-top"><span>Danger 危险值</span><span id="dangerText">0</span></div><div class="bar"><div class="fill danger" id="dangerBar"></div></div></div>
+        <div class="small" id="progressText">进度：0 / 0</div>
+      </div>
+
+      <div class="card msg" id="messageBox">这是加强版关卡：不是单纯跳平台，需要开关、钥匙、移动平台和检查点。</div>
+
+      <div class="card">
+        <h3>生命周期图谱</h3>
+        <div class="lifecycle" id="lifecycle"></div>
+      </div>
+
+      <div class="card">
+        <h3>图例</h3>
+        <div class="small">
+          🟢 信号/营养：推进目标<br>
+          💊 药物分子：扣血<br>
+          ⚪ 免疫细胞：扣血并提高危险值<br>
+          🧷 开关：按 E 激活，打开屏障<br>
+          ⚑ 检查点：碰到后保存复活点<br>
+          🚪 阶段门：满足条件后按 E 进入下一关
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const VIEW_W = canvas.width, VIEW_H = canvas.height;
+
+const GRAVITY = 1500;       // 调低重力，保证跳跃抛物线自然
+const RUN_SPEED = 275;
+const JUMP_VELOCITY = 650;  // 最大跳高约 140px，水平跃距约 230px
+const MAX_FALL = 950;
+const COYOTE_TIME = 0.11;
+const JUMP_BUFFER = 0.12;
+
+const keys = {};
+const justPressed = {};
+let gameState = "intro";
+let levelIndex = 0;
+let lastT = 0;
+let cameraX = 0;
+let cameraTarget = 0;
+let damageCooldown = 0;
+let interactCooldown = 0;
+let doneSteps = new Set();
+
+const stageNames = {
+  SPOROZOITE:"子孢子 Sporozoite",
+  LIVER_STAGE:"肝期 Liver Stage",
+  MEROZOITE:"裂殖子 Merozoite",
+  RBC_STAGE:"红细胞期 RBC Stage",
+  SCHIZONT:"裂殖体 Schizont",
+  GAMETOCYTE:"配子体 Gametocyte"
+};
+
+const lifecycleSteps = ["蚊虫叮咬","血液游走","肝细胞发育","红细胞入侵","红细胞增殖","发热周期","配子体形成","宿主转换"];
+
+function P(x,y,w,h){return {x,y,w,h,type:"platform"}}
+function MP(x,y,w,h,minX,maxX,vx){return {x,y,w,h,minX,maxX,vx,dx:0,type:"moving"}}
+function H(x,y,w,h,type,minX=0,maxX=0,vx=0){return {x,y,w,h,type,minX,maxX,vx,dx:0}}
+function C(x,y,type,dev=0){return {x,y,w:24,h:24,type,dev,got:false}}
+function S(x,y){return {x,y,w:48,h:16,active:false}}
+function D(x,y,w,h){return {x,y,w,h,open:false}}
+function CP(x,y){return {x,y,w:26,h:62,active:false}}
+function G(x,y){return {x,y,w:64,h:92}}
+
+const levels = [
+  {
+    title:"第一关：蚊吻入口",
+    area:"皮肤微血管",
+    stage:"SPOROZOITE",
+    worldW:1900,
+    bg:["#24242a","#3c2a2b","#12161a"],
+    start:{x:46,y:420},
+    required:{core:4,switches:1,development:0},
+    desc:"从蚊虫叮咬处进入血流。这里加入了缺口、移动免疫细胞、开关门和检查点。",
+    objectives:["收集 4 个方向信号", "激活 1 个内皮信号开关", "避开免疫细胞，到达肝脏入口"],
+    knowledge:"蚊子叮咬时，疟原虫子孢子进入人体，并随血流向肝脏移动。现实中，防蚊叮咬是阻断疟疾传播的第一环节。",
+    platforms:[
+      P(0,500,260,40),P(340,500,250,40),P(690,500,240,40),P(1030,500,260,40),P(1410,500,330,40),
+      P(180,420,120,18),P(430,385,130,18),P(760,420,130,18),P(1010,360,120,18),P(1260,410,120,18),P(1540,350,130,18)
+    ],
+    moving:[MP(610,430,110,16,600,760,60),MP(1320,315,100,16,1280,1450,70)],
+    hazards:[H(300,462,44,44,"immune",280,500,85),H(850,462,40,40,"drug",760,955,70),H(1160,462,46,46,"immune",1110,1300,92),H(1510,315,38,38,"drug",1490,1690,75)],
+    collectibles:[C(230,382,"signal"),C(485,345,"signal"),C(805,382,"signal"),C(1578,312,"signal")],
+    switches:[S(1110,342)],
+    doors:[D(1360,395,36,105)],
+    checkpoints:[CP(650,438),CP(1215,438)],
+    gate:G(1775,408)
+  },
+  {
+    title:"第二关：潜入肝脏",
+    area:"肝窦 / 肝细胞周围",
+    stage:"SPOROZOITE",
+    worldW:2050,
+    bg:["#1e2420","#334535","#111612"],
+    start:{x:50,y:420},
+    required:{core:5,switches:2,development:0},
+    desc:"纵向爬升关：通过肝窦平台，避开库普弗细胞巡逻，打开两道入口屏障。",
+    objectives:["收集 5 个肝细胞定位信号", "激活 2 个入口开关", "进入肝细胞门"],
+    knowledge:"子孢子到达肝脏后会穿过肝窦环境并进入肝细胞。库普弗细胞是肝脏内重要的免疫细胞。",
+    platforms:[
+      P(0,500,300,40),P(380,500,270,40),P(750,500,260,40),P(1110,500,300,40),P(1510,500,430,40),
+      P(190,420,120,18),P(410,350,130,18),P(620,290,120,18),P(840,360,140,18),P(1070,300,120,18),P(1300,390,120,18),P(1530,330,130,18),P(1730,270,120,18)
+    ],
+    moving:[MP(660,430,110,16,660,830,58),MP(1190,250,120,16,1180,1380,62),MP(1440,430,120,16,1420,1600,70)],
+    hazards:[H(330,462,50,50,"immune",310,610,78),H(700,250,46,46,"immune",650,900,64),H(1230,462,50,50,"immune",1170,1390,86),H(1605,290,38,38,"drug",1540,1760,76)],
+    collectibles:[C(220,382,"nutrient"),C(455,312,"nutrient"),C(660,252,"nutrient"),C(1120,262,"nutrient"),C(1770,232,"nutrient")],
+    switches:[S(875,342),S(1340,372)],
+    doors:[D(1010,395,36,105),D(1460,395,36,105)],
+    checkpoints:[CP(735,438),CP(1260,438)],
+    gate:G(1890,408)
+  },
+  {
+    title:"第三关：肝细胞发育",
+    area:"肝细胞内部",
+    stage:"LIVER_STAGE",
+    worldW:2150,
+    bg:["#2c241f","#583d2c","#151210"],
+    start:{x:45,y:420},
+    required:{core:5,switches:1,development:100},
+    desc:"收集 ATP 与营养推进发育。中段加入移动平台和药物分子，后段需要开门。",
+    objectives:["Development 达到 100", "收集 5 个营养核心", "打开裂殖子释放门"],
+    knowledge:"疟原虫在肝细胞内大量无性增殖，形成裂殖子。肝期通常症状不明显，但决定了后续血液感染的开始。",
+    platforms:[
+      P(0,500,310,40),P(390,500,280,40),P(750,500,260,40),P(1120,500,260,40),P(1490,500,500,40),
+      P(210,415,120,18),P(460,350,130,18),P(720,300,120,18),P(985,365,120,18),P(1220,300,120,18),P(1460,385,130,18),P(1700,320,120,18)
+    ],
+    moving:[MP(825,430,120,16,810,990,65),MP(1340,250,120,16,1320,1530,80),MP(1810,405,120,16,1780,1950,70)],
+    hazards:[H(335,462,40,40,"drug",310,560,75),H(860,260,40,40,"drug",790,1010,80),H(1165,462,44,44,"immune",1120,1360,78),H(1595,350,38,38,"drug",1520,1750,90)],
+    collectibles:[C(245,375,"atp",20),C(505,312,"atp",20),C(760,262,"atp",20),C(1260,262,"atp",20),C(1740,282,"atp",20)],
+    switches:[S(1515,367)],
+    doors:[D(1905,395,36,105)],
+    checkpoints:[CP(760,438),CP(1400,438)],
+    gate:G(2020,408)
+  },
+  {
+    title:"第四关：红细胞入侵",
+    area:"血液循环",
+    stage:"MEROZOITE",
+    worldW:2200,
+    timeLimit:75,
+    bg:["#2b171a","#653037","#120f10"],
+    start:{x:45,y:420},
+    required:{core:3,switches:0,development:0},
+    desc:"速度关。裂殖子暴露在血液中，危险值增长更快，需要在血流与红细胞平台间连续跳跃。",
+    objectives:["限时 75 秒", "收集 3 个入侵信号", "进入红细胞"],
+    knowledge:"裂殖子从肝细胞释放后需要快速入侵红细胞。暴露时间越长，被抗体和免疫细胞清除的风险越高。",
+    platforms:[
+      P(0,500,260,40),P(350,500,220,40),P(680,500,240,40),P(1040,500,240,40),P(1410,500,230,40),P(1770,500,300,40),
+      P(170,410,110,18),P(455,360,115,18),P(760,390,110,18),P(1010,330,110,18),P(1300,385,120,18),P(1580,335,110,18),P(1850,395,120,18)
+    ],
+    moving:[MP(580,420,120,16,575,740,110),MP(1180,270,120,16,1160,1360,105),MP(1660,425,120,16,1640,1830,115)],
+    hazards:[H(300,462,46,46,"immune",280,540,105),H(890,462,42,42,"drug",820,1020,105),H(1380,350,44,44,"immune",1320,1590,100),H(1705,462,42,42,"drug",1650,1900,115)],
+    collectibles:[C(200,372,"signal"),C(1045,292,"signal"),C(1608,298,"signal")],
+    switches:[],
+    doors:[],
+    checkpoints:[CP(690,438),CP(1370,438)],
+    gate:G(2060,408)
+  },
+  {
+    title:"第五关：红细胞内增殖",
+    area:"红细胞内部",
+    stage:"RBC_STAGE",
+    worldW:2300,
+    bg:["#351719","#793638","#170e0f"],
+    start:{x:45,y:420},
+    required:{core:5,switches:2,development:100},
+    desc:"迷宫式红细胞内部：收集血红蛋白，避开游离血红素毒区和抗疟药，打开两个代谢门。",
+    objectives:["收集 5 个血红蛋白", "De<script src="js/game.js"></script>
